@@ -30,19 +30,13 @@ function Wait-Http {
         [int]$Attempts = 45
     )
 
-    for ($i = 1; $i -le $Attempts; $i++) {
-        $exitCode = 1
-
-        if ($Insecure) {
-            # Windows curl.exe uses Schannel and can fail the TLS handshake
-            # against the short-lived local self-signed certificate even with -k.
-            # Python uses OpenSSL here and is also what the container healthcheck uses.
-            $pythonProbe = @'
+    $pythonProbe = @'
 import ssl
 import sys
 import urllib.request
 url = sys.argv[1]
-ctx = ssl._create_unverified_context()
+insecure = sys.argv[2] == "1"
+ctx = ssl._create_unverified_context() if insecure else None
 try:
     with urllib.request.urlopen(url, context=ctx, timeout=5) as response:
         response.read()
@@ -50,23 +44,11 @@ try:
 except Exception:
     raise SystemExit(1)
 '@
-            & python -c $pythonProbe $Url *> $null
-            $exitCode = $LASTEXITCODE
-        }
-        else {
-            $args = @('-fsS', '--connect-timeout', '3', '--max-time', '5', $Url)
-            $previousErrorActionPreference = $ErrorActionPreference
-            try {
-                $ErrorActionPreference = 'Continue'
-                & curl.exe @args *> $null
-                $exitCode = $LASTEXITCODE
-            }
-            finally {
-                $ErrorActionPreference = $previousErrorActionPreference
-            }
-        }
 
-        if ($exitCode -eq 0) { return }
+    for ($i = 1; $i -le $Attempts; $i++) {
+        $insecureFlag = if ($Insecure) { '1' } else { '0' }
+        & python -c $pythonProbe $Url $insecureFlag *> $null
+        if ($LASTEXITCODE -eq 0) { return }
         Start-Sleep -Seconds 2
     }
 
@@ -75,7 +57,6 @@ except Exception:
 
 Assert-Command git
 Assert-Command docker
-Assert-Command curl.exe
 Assert-Command python
 
 Write-Host '=== System Monitor DORA + SOTA Local Verification ===' -ForegroundColor Cyan
@@ -143,6 +124,9 @@ try {
         Write-Host ''
         Write-Host 'Monitor logs:' -ForegroundColor Yellow
         & docker compose -f $composeFile logs --no-color --tail=200 monitor | Out-Host
+        Write-Host ''
+        Write-Host 'UI logs:' -ForegroundColor Yellow
+        & docker compose -f $composeFile logs --no-color --tail=200 ui | Out-Host
         throw
     }
     Show-Pass 'Monitor + UI + AI Ops + DORA are healthy'
