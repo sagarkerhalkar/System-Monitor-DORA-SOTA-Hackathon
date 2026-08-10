@@ -55,3 +55,32 @@ resource "aws_iam_role_policy_attachment" "eks_cni" {
   role       = aws_iam_role.eks_nodes.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
+
+resource "aws_iam_role" "ebs_csi" {
+  name = "${local.cluster_name}-ebs-csi"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "AllowEksAuthToAssumeRoleForPodIdentity"
+      Effect = "Allow"
+      Principal = {
+        Service = "pods.eks.amazonaws.com"
+      }
+      Action = [
+        "sts:AssumeRole",
+        "sts:TagSession",
+      ]
+    }]
+  })
+
+  tags = {
+    Name               = "${local.cluster_name}-ebs-csi"
+    "eks-cluster-name" = local.cluster_name
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_cluster_scoped" {
+  role       = aws_iam_role.ebs_csi.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEBSCSIDriverEKSClusterScopedPolicy"
+}
