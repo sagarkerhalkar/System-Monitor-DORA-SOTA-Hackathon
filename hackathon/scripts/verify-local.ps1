@@ -172,6 +172,7 @@ try {
     $aiProof = @'
 import json
 import urllib.request
+
 payload = {
     "machine_id": "windows-local-verification",
     "metrics": {
@@ -189,6 +190,7 @@ payload = {
         {"cpu_pct": 42, "memory_pct": 60, "disk_pct": 70, "latency_ms": 31, "packet_loss_pct": 0.1},
     ],
 }
+
 request = urllib.request.Request(
     "http://127.0.0.1:8081/v1/analyze",
     data=json.dumps(payload).encode("utf-8"),
@@ -197,11 +199,22 @@ request = urllib.request.Request(
 )
 with urllib.request.urlopen(request, timeout=5) as response:
     result = json.load(response)
+
 assert result.get("ok") and float(result.get("anomaly_score", 0)) >= 60, result
 print(json.dumps({"anomaly_score": result["anomaly_score"], "status": result["status"]}))
 '@
-    $aiResult = ((& docker compose -f $composeFile exec -T ai-ops python -c $aiProof | Out-String).Trim())
-    if ($LASTEXITCODE -ne 0) { throw 'AI inference proof failed.' }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $aiExitCode = 1
+    try {
+        $ErrorActionPreference = 'Continue'
+        $aiResult = (($aiProof | & docker compose -f $composeFile exec -T ai-ops python - | Out-String).Trim())
+        $aiExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($aiExitCode -ne 0) { throw 'AI inference proof failed.' }
     Write-Host "AI result: $aiResult"
     Show-Pass 'AI Ops anomaly inference is working'
 
@@ -229,6 +242,7 @@ payload = {
     "rollout_strategy": "canary",
     "source": "local-verification",
 }
+
 request = urllib.request.Request(
     "http://127.0.0.1:8082/v1/deployments",
     data=json.dumps(payload).encode("utf-8"),
@@ -237,8 +251,10 @@ request = urllib.request.Request(
 )
 with urllib.request.urlopen(request, timeout=5) as response:
     json.load(response)
+
 with urllib.request.urlopen("http://127.0.0.1:8082/v1/metrics?environment=production&days=30", timeout=5) as response:
     metrics = json.load(response)
+
 assert int(metrics.get("successful_deployments", 0)) >= 1, metrics
 print(json.dumps({
     "successful_deployments": metrics.get("successful_deployments"),
@@ -247,8 +263,18 @@ print(json.dumps({
     "mean_time_to_restore_seconds": metrics.get("mean_time_to_restore_seconds"),
 }))
 '@
-    $doraResult = ((& docker compose -f $composeFile exec -T dora python -c $doraProof $commitSha | Out-String).Trim())
-    if ($LASTEXITCODE -ne 0) { throw 'DORA metric proof failed.' }
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    $doraExitCode = 1
+    try {
+        $ErrorActionPreference = 'Continue'
+        $doraResult = (($doraProof | & docker compose -f $composeFile exec -T dora python - $commitSha | Out-String).Trim())
+        $doraExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($doraExitCode -ne 0) { throw 'DORA metric proof failed.' }
     Write-Host "DORA result: $doraResult"
     Show-Pass 'DORA event collection and metric calculation are working'
 
