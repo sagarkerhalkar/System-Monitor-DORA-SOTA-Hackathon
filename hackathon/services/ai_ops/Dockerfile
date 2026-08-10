@@ -7,10 +7,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY hackathon/services/ai_ops/app.py /app/app.py
 
-# The upstream Python runtime currently includes msgpack/setuptools even though
-# this stdlib-only service does not use them. Remove the unused packages rather
-# than carrying known HIGH-severity vulnerabilities into the runtime image.
-RUN python -m pip uninstall --yes msgpack setuptools \
+# This service is stdlib-only and never installs packages at runtime. Remove
+# pip itself so its vendored dependency bundle is not shipped in production.
+RUN python -m pip uninstall --yes pip \
     && useradd --create-home --uid 10001 appuser
 
 USER 10001:10001
