@@ -1,0 +1,30 @@
+# Copy to terraform.tfvars before apply. Do not commit terraform.tfvars.
+
+aws_region         = "ap-south-1"
+project_name       = "sagar-system-monitor"
+environment        = "hackathon"
+kubernetes_version = "1.36"
+
+# IMPORTANT: replace this documentation-only address with YOUR current public IPv4 /32.
+# Example PowerShell discovery command:
+#   (Invoke-RestMethod -Uri 'https://checkip.amazonaws.com').Trim()
+cluster_public_access_cidrs = ["203.0.113.10/32"]
+
+node_instance_types = ["t3.large"]
+node_capacity_type  = "ON_DEMAND"
+node_min_size       = 2
+node_desired_size   = 2
+node_max_size       = 3
+node_disk_size_gib  = 50
+
+github_owner         = "sagarkerhalkar"
+github_repository    = "System-Monitor-DORA-SOTA-Hackathon"
+github_deploy_branch = "main"
+github_environment   = "production"
+
+# Keep true unless this AWS account already has the GitHub Actions OIDC provider.
+create_github_oidc_provider      = true
+existing_github_oidc_provider_arn = ""
+
+ecr_image_retention_count = 40
+secret_recovery_window_days = 7
