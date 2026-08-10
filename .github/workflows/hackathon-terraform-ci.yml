@@ -49,7 +49,7 @@ jobs:
           fi
 
       - name: Terraform format check
-        run: terraform fmt -check -recursive infra/terraform
+        run: terraform fmt -check -diff -recursive infra/terraform
 
       - name: Terraform init without backend
         run: terraform -chdir=infra/terraform init -backend=false -input=false
