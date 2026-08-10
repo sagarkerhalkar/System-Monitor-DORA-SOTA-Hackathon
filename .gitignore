@@ -8,6 +8,11 @@ hackathon/.env
 *.crt
 .terraform/
 terraform.tfstate*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+crash.log
+backend.hcl
 __pycache__/
 *.py[cod]
 .pytest_cache/
