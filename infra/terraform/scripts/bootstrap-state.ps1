@@ -55,11 +55,41 @@ if ($LASTEXITCODE -ne 0) { throw 'Failed to enforce S3 public-access block.' }
     --versioning-configuration Status=Enabled | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to enable S3 bucket versioning.' }
 
-$encryption = '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":true}]}'
-& aws s3api put-bucket-encryption `
-    --bucket $bucket `
-    --server-side-encryption-configuration $encryption | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'Failed to enable S3 state encryption.' }
+$encryptionFile = Join-Path $env:TEMP ("sagar-monitor-s3-encryption-{0}.json" -f [guid]::NewGuid().ToString('N'))
+$encryptionJson = '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+
+try {
+    Set-Content -LiteralPath $encryptionFile -Value $encryptionJson -Encoding ascii
+    $encryptionUri = "file://$encryptionFile"
+
+    & aws s3api put-bucket-encryption `
+        --bucket $bucket `
+        --server-side-encryption-configuration $encryptionUri | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to enable S3 state encryption.' }
+}
+finally {
+    Remove-Item -LiteralPath $encryptionFile -Force -ErrorAction SilentlyContinue
+}
+
+$versioningStatus = ((& aws s3api get-bucket-versioning --bucket $bucket --query Status --output text) | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $versioningStatus -ne 'Enabled') {
+    throw "S3 state bucket versioning verification failed. Status=$versioningStatus"
+}
+
+$encryptionAlgorithm = ((& aws s3api get-bucket-encryption --bucket $bucket --query 'ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm' --output text) | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $encryptionAlgorithm -ne 'AES256') {
+    throw "S3 state bucket encryption verification failed. Algorithm=$encryptionAlgorithm"
+}
+
+$publicAccessJson = ((& aws s3api get-public-access-block --bucket $bucket --output json) | Out-String)
+if ($LASTEXITCODE -ne 0 -or -not $publicAccessJson) {
+    throw 'S3 public-access block verification failed.'
+}
+$publicAccess = $publicAccessJson | ConvertFrom-Json
+$publicAccessConfig = $publicAccess.PublicAccessBlockConfiguration
+if (-not ($publicAccessConfig.BlockPublicAcls -and $publicAccessConfig.IgnorePublicAcls -and $publicAccessConfig.BlockPublicPolicy -and $publicAccessConfig.RestrictPublicBuckets)) {
+    throw 'S3 public-access block is not fully enabled.'
+}
 
 $backendFile = Join-Path (Split-Path $PSScriptRoot -Parent) 'backend.hcl'
 @"
@@ -71,6 +101,9 @@ region = "$Region"
 Write-Host ''
 Write-Host '[PASS] Terraform state bootstrap complete.' -ForegroundColor Green
 Write-Host "Bucket: $bucket"
+Write-Host "Versioning: $versioningStatus"
+Write-Host "Encryption: $encryptionAlgorithm (SSE-S3)"
+Write-Host 'Public access block: enabled'
 Write-Host "Backend config: $backendFile"
 Write-Host ''
 Write-Host 'Next:' -ForegroundColor Cyan
