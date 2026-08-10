@@ -29,15 +29,31 @@ function Wait-Http {
         [switch]$Insecure,
         [int]$Attempts = 45
     )
+
     for ($i = 1; $i -le $Attempts; $i++) {
-        $args = @('-fsS')
+        $args = @('-fsS', '--connect-timeout', '3', '--max-time', '5')
         if ($Insecure) { $args += '-k' }
         $args += $Url
-        & curl.exe @args 1>$null 2>$null
-        if ($LASTEXITCODE -eq 0) { return }
+
+        # Windows PowerShell 5.1 can promote native curl stderr to a
+        # terminating NativeCommandError while ErrorActionPreference is Stop.
+        # A service that is still starting must be retried, not abort the script.
+        $previousErrorActionPreference = $ErrorActionPreference
+        $exitCode = 1
+        try {
+            $ErrorActionPreference = 'Continue'
+            & curl.exe @args *> $null
+            $exitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
+
+        if ($exitCode -eq 0) { return }
         Start-Sleep -Seconds 2
     }
-    throw "Health check failed: $Url"
+
+    throw "Health check failed after $Attempts attempts: $Url"
 }
 
 Assert-Command git
