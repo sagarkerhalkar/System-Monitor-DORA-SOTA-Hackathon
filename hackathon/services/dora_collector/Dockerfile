@@ -8,9 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY hackathon/services/dora_collector/app.py /app/app.py
 
-# This service is stdlib-only. Remove unused packages inherited from the base
-# image instead of shipping their known HIGH-severity vulnerabilities.
-RUN python -m pip uninstall --yes msgpack setuptools \
+# This service is stdlib-only and never installs packages at runtime. Remove
+# pip itself so its vendored dependency bundle is not shipped in production.
+RUN python -m pip uninstall --yes pip \
     && useradd --create-home --uid 10002 appuser \
     && mkdir -p /data \
     && chown -R appuser:appuser /data /app
