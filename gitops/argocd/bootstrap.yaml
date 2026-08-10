@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: system-monitor
+  namespace: argocd
+spec:
+  description: Sagar System Monitor hackathon GitOps boundary
+  sourceRepos:
+    - https://github.com/sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon.git
+  destinations:
+    - namespace: system-monitor
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: storage.k8s.io
+      kind: StorageClass
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: system-monitor
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: system-monitor
+  source:
+    repoURL: https://github.com/sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon.git
+    targetRevision: main
+    path: gitops/base
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: system-monitor
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+  revisionHistoryLimit: 10
