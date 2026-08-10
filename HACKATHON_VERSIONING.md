@@ -30,27 +30,37 @@ This repository uses a simple visible commit sequence for mentor review and demo
 - **Hackathon 3.23** — Add repository-scoped GitHub OIDC role for keyless AWS access.
 - **Hackathon 3.24** — Add KMS-encrypted Secrets Manager metadata without storing secret values.
 - **Hackathon 3.25** — Expose EKS, ECR, OIDC, KMS and secret integration outputs.
-- **Hackathon 3.26** — Add secret-free AWS tfvars example and EKS endpoint guardrail.
+- **Hackathon 3.26** — Add secret-free AWS tfvars example and initial EKS endpoint guardrail.
 - **Hackathon 3.27** — Ignore Terraform secrets, plans, state and backend runtime files.
 - **Hackathon 3.28** — Add S3 remote-state lockfile backend template.
 - **Hackathon 3.29** — Add idempotent encrypted S3 Terraform state bootstrap.
 - **Hackathon 3.30** — Document safe AWS bootstrap, apply, validation and teardown workflow.
 - **Hackathon 3.31** — Add Terraform validation and Trivy IaC security gate.
 - **Hackathon 3.32** — Synchronize mentor-visible engineering/version ledger with delivered work.
+- **Hackathon 3.33** — Fix Terraform runtime-file guard and pin CI action SHAs.
+- **Hackathon 3.34** — Format Terraform VPC configuration.
+- **Hackathon 3.35** — Print Terraform formatter diff in CI.
+- **Hackathon 3.36** — Apply exact Terraform VPC formatting.
+- **Hackathon 3.37** — Make EKS Kubernetes API private-only.
+- **Hackathon 3.38** — Disable automatic public IPs on public subnets.
+- **Hackathon 3.39** — Remove obsolete public EKS endpoint CIDR input.
+- **Hackathon 3.40** — Simplify tfvars for private-only EKS access.
+- **Hackathon 3.41** — Document private EKS CloudShell management workflow. Terraform CI passed format, provider init, validate and Trivy HIGH/CRITICAL with no suppressed findings.
+- **Hackathon 3.42** — Synchronize the version ledger after the validated AWS Terraform foundation merge.
 
 ## Next sequence
 
-- **Hackathon 3.33** — Container CI/CD supply-chain pipeline: AWS OIDC, ECR build/push by digest, Trivy HIGH/CRITICAL image gate, CycloneDX SBOM and Cosign keyless signing/attestation.
-- **Hackathon 3.34** — Kubernetes base manifests and GitOps repository structure.
-- **Hackathon 3.35** — Argo CD install/application with auto-sync, prune, self-heal and visible deployment history.
-- **Hackathon 3.36** — Argo Rollouts canary 10% → 25% → 50% → 100% with Prometheus analysis and automatic abort/rollback.
-- **Hackathon 3.37** — Kyverno policy as code including non-root, resources, allowed registry/digest and signed-image verification.
-- **Hackathon 3.38** — Prometheus, Grafana and Alertmanager observability.
-- **Hackathon 3.39** — Loki logs, Tempo traces and OpenTelemetry instrumentation/collection.
-- **Hackathon 3.40** — DORA dashboard and CI/rollout/incident event integration.
-- **Hackathon 3.41** — Secrets Manager runtime integration, rotation, cert-manager and HTTPS.
-- **Hackathon 3.42** — Deliberately bad canary, automated rollback, MTTR evidence and policy-denial demo.
-- **Hackathon 3.43** — Final DORA + SOTA report, architecture, evidence pack, demo script and submission package.
+- **Hackathon 3.43** — Container CI/CD supply-chain pipeline: AWS OIDC, ECR build/push by digest, Trivy HIGH/CRITICAL image gate, CycloneDX SBOM and Cosign keyless signing/attestation.
+- **Hackathon 3.44** — Kubernetes base manifests and GitOps repository structure.
+- **Hackathon 3.45** — Argo CD install/application with auto-sync, prune, self-heal and visible deployment history.
+- **Hackathon 3.46** — Argo Rollouts canary 10% → 25% → 50% → 100% with Prometheus analysis and automatic abort/rollback.
+- **Hackathon 3.47** — Kyverno policy as code including non-root, resources, allowed registry/digest and signed-image verification.
+- **Hackathon 3.48** — Prometheus, Grafana and Alertmanager observability.
+- **Hackathon 3.49** — Loki logs, Tempo traces and OpenTelemetry instrumentation/collection.
+- **Hackathon 3.50** — DORA dashboard and CI/rollout/incident event integration.
+- **Hackathon 3.51** — Secrets Manager runtime integration, rotation, cert-manager and HTTPS.
+- **Hackathon 3.52** — Deliberately bad canary, automated rollback, MTTR evidence and policy-denial demo.
+- **Hackathon 3.53** — Final DORA + SOTA report, architecture, evidence pack, demo script and submission package.
 
 ## Commit-message rule
 
