@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+# Linux container entrypoint. Keep LF line endings; enforced by .gitattributes.
 set -eu
 
 DATA_ROOT="${MONITOR_DATA_ROOT:-/data}"
