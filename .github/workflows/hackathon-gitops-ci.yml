@@ -33,11 +33,12 @@ jobs:
         run: |
           set -euo pipefail
           ruby -e '
-            require "yaml"
+            require "psych"
             ARGV.each do |path|
-              docs = YAML.load_stream(File.read(path), aliases: false)
-              abort("#{path}: no YAML documents") if docs.empty?
-              puts "#{path}: #{docs.length} YAML documents parsed"
+              stream = Psych.parse_stream(File.read(path), filename: path)
+              count = stream.children.length
+              abort("#{path}: no YAML documents") if count.zero?
+              puts "#{path}: #{count} YAML documents parsed"
             end
           ' gitops/base/system-monitor.yaml gitops/argocd/bootstrap.yaml
 
