@@ -1,0 +1,100 @@
+name: Hackathon GitOps CI
+
+on:
+  pull_request:
+    paths:
+      - 'gitops/**'
+      - '.github/workflows/hackathon-gitops-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'gitops/**'
+      - '.github/workflows/hackathon-gitops-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-gitops:
+    name: Validate GitOps contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Parse YAML documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e '
+            require "yaml"
+            ARGV.each do |path|
+              docs = YAML.load_stream(File.read(path), aliases: false)
+              abort("#{path}: no YAML documents") if docs.empty?
+              puts "#{path}: #{docs.length} YAML documents parsed"
+            end
+          ' gitops/base/system-monitor.yaml gitops/argocd/bootstrap.yaml
+
+      - name: Validate CloudShell bootstrap syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n gitops/scripts/bootstrap-argocd-cloudshell.sh
+
+      - name: Enforce immutable GitOps contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import pathlib
+          import re
+
+          base = pathlib.Path('gitops/base/system-monitor.yaml').read_text(encoding='utf-8')
+          bootstrap = pathlib.Path('gitops/argocd/bootstrap.yaml').read_text(encoding='utf-8')
+          script = pathlib.Path('gitops/scripts/bootstrap-argocd-cloudshell.sh').read_text(encoding='utf-8')
+
+          digests = re.findall(r'image:\s+\S+@sha256:[0-9a-f]{64}', base)
+          if len(digests) != 4:
+              raise SystemExit(f'Expected exactly 4 digest-pinned service images, found {len(digests)}')
+
+          if ':latest' in base or ':latest' in bootstrap or ':latest' in script:
+              raise SystemExit('Floating :latest tag is forbidden in GitOps assets')
+
+          if 'MONITOR_ADMIN_PASSWORD\n              value:' in base:
+              raise SystemExit('Monitor admin password must not be committed as plaintext')
+
+          required_base = [
+              'secretKeyRef:',
+              'name: monitor-runtime',
+              'storageClassName: gp3-encrypted',
+              'provisioner: ebs.csi.aws.com',
+              'automountServiceAccountToken: false',
+              'readOnlyRootFilesystem: true',
+          ]
+          for token in required_base:
+              if token not in base:
+                  raise SystemExit(f'Missing GitOps security/storage contract: {token}')
+
+          required_bootstrap = [
+              'https://github.com/sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon.git',
+              'https://kubernetes.default.svc',
+              'targetRevision: main',
+              'path: gitops/base',
+              'prune: true',
+              'selfHeal: true',
+          ]
+          for token in required_bootstrap:
+              if token not in bootstrap:
+                  raise SystemExit(f'Missing Argo CD boundary contract: {token}')
+
+          if 'ARGOCD_VERSION="v3.5.0"' not in script:
+              raise SystemExit('Argo CD bootstrap version must be pinned to v3.5.0')
+
+          print('GitOps immutable/security contracts passed')
+          PY
