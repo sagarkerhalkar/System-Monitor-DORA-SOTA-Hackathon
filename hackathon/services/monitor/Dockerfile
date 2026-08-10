@@ -9,6 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates openssl \
     && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall --yes msgpack setuptools \
     && useradd --create-home --uid 10000 appuser \
     && mkdir -p /app /data \
     && chown -R appuser:appuser /app /data
