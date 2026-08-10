@@ -1,4 +1,4 @@
-﻿hackathon/.env
+hackathon/.env
 *.db
 *.db-wal
 *.db-shm
@@ -8,3 +8,6 @@
 *.crt
 .terraform/
 terraform.tfstate*
+__pycache__/
+*.py[cod]
+.pytest_cache/
