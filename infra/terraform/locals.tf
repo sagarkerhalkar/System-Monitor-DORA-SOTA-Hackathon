@@ -24,9 +24,18 @@ locals {
 
   github_repository_full_name = "${var.github_owner}/${var.github_repository}"
 
+  # GitHub repositories created after 2026-07-15 use immutable OIDC subject
+  # claims that include both the owner ID and repository ID. These IDs are
+  # intentionally pinned to this standalone hackathon repository so a rename
+  # cannot silently transfer AWS deployment trust to a different repository.
+  github_owner_id      = "85802314"
+  github_repository_id = "1329650013"
+
+  github_oidc_repository_identity = "${var.github_owner}@${local.github_owner_id}/${var.github_repository}@${local.github_repository_id}"
+
   github_oidc_subjects = [
-    "repo:${local.github_repository_full_name}:ref:refs/heads/${var.github_deploy_branch}",
-    "repo:${local.github_repository_full_name}:environment:${var.github_environment}",
+    "repo:${local.github_oidc_repository_identity}:ref:refs/heads/${var.github_deploy_branch}",
+    "repo:${local.github_oidc_repository_identity}:environment:${var.github_environment}",
   ]
 
   common_tags = {
