@@ -5,7 +5,7 @@ services:
       dockerfile: hackathon/services/monitor/Dockerfile
     environment:
       MONITOR_ADMIN_USERNAME: ${MONITOR_ADMIN_USERNAME:-hackathon-admin}
-      MONITOR_ADMIN_PASSWORD: ${MONITOR_ADMIN_PASSWORD:?Set MONITOR_ADMIN_PASSWORD in hackathon/.env}
+      MONITOR_ADMIN_PASSWORD: ${MONITOR_ADMIN_PASSWORD:-}
       MONITOR_ORG_NAME: ${MONITOR_ORG_NAME:-Sagar Monitor Hackathon}
       MONITOR_ORG_ID: ${MONITOR_ORG_ID:-sagar-monitor-hackathon}
     volumes:
