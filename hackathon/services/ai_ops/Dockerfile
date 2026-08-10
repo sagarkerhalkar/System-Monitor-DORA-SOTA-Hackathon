@@ -7,7 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY hackathon/services/ai_ops/app.py /app/app.py
 
-RUN useradd --create-home --uid 10001 appuser
+# The upstream Python runtime currently includes msgpack/setuptools even though
+# this stdlib-only service does not use them. Remove the unused packages rather
+# than carrying known HIGH-severity vulnerabilities into the runtime image.
+RUN python -m pip uninstall --yes msgpack setuptools \
+    && useradd --create-home --uid 10001 appuser
+
 USER 10001:10001
 
 EXPOSE 8081
