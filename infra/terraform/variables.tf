@@ -39,12 +39,6 @@ variable "availability_zone_count" {
   }
 }
 
-variable "cluster_public_access_cidrs" {
-  description = "CIDRs allowed to reach the public EKS API endpoint. Replace the safe placeholder with your public IP /32 before apply."
-  type        = list(string)
-  default     = ["127.0.0.1/32"]
-}
-
 variable "node_instance_types" {
   description = "EC2 instance types for the managed node group. Two t3.large nodes are the reliable demo default for the observability stack."
   type        = list(string)
