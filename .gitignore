@@ -1,0 +1,10 @@
+﻿hackathon/.env
+*.db
+*.db-wal
+*.db-shm
+.env
+*.pem
+*.key
+*.crt
+.terraform/
+terraform.tfstate*
