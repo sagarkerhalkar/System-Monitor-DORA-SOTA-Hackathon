@@ -31,22 +31,39 @@ function Wait-Http {
     )
 
     for ($i = 1; $i -le $Attempts; $i++) {
-        $args = @('-fsS', '--connect-timeout', '3', '--max-time', '5')
-        if ($Insecure) { $args += '-k' }
-        $args += $Url
-
-        # Windows PowerShell 5.1 can promote native curl stderr to a
-        # terminating NativeCommandError while ErrorActionPreference is Stop.
-        # A service that is still starting must be retried, not abort the script.
-        $previousErrorActionPreference = $ErrorActionPreference
         $exitCode = 1
-        try {
-            $ErrorActionPreference = 'Continue'
-            & curl.exe @args *> $null
+
+        if ($Insecure) {
+            # Windows curl.exe uses Schannel and can fail the TLS handshake
+            # against the short-lived local self-signed certificate even with -k.
+            # Python uses OpenSSL here and is also what the container healthcheck uses.
+            $pythonProbe = @'
+import ssl
+import sys
+import urllib.request
+url = sys.argv[1]
+ctx = ssl._create_unverified_context()
+try:
+    with urllib.request.urlopen(url, context=ctx, timeout=5) as response:
+        response.read()
+        raise SystemExit(0 if 200 <= response.status < 400 else 1)
+except Exception:
+    raise SystemExit(1)
+'@
+            & python -c $pythonProbe $Url *> $null
             $exitCode = $LASTEXITCODE
         }
-        finally {
-            $ErrorActionPreference = $previousErrorActionPreference
+        else {
+            $args = @('-fsS', '--connect-timeout', '3', '--max-time', '5', $Url)
+            $previousErrorActionPreference = $ErrorActionPreference
+            try {
+                $ErrorActionPreference = 'Continue'
+                & curl.exe @args *> $null
+                $exitCode = $LASTEXITCODE
+            }
+            finally {
+                $ErrorActionPreference = $previousErrorActionPreference
+            }
         }
 
         if ($exitCode -eq 0) { return }
@@ -113,10 +130,21 @@ try {
     & docker compose -f $composeFile up -d
     if ($LASTEXITCODE -ne 0) { throw 'Docker Compose startup failed.' }
 
-    Wait-Http -Url 'https://127.0.0.1:8443/api/v1/health/live' -Insecure
-    Wait-Http -Url 'http://127.0.0.1:8080/'
-    Wait-Http -Url 'http://127.0.0.1:8081/healthz'
-    Wait-Http -Url 'http://127.0.0.1:8082/healthz'
+    try {
+        Wait-Http -Url 'https://127.0.0.1:8443/api/v1/health/live' -Insecure
+        Wait-Http -Url 'http://127.0.0.1:8080/'
+        Wait-Http -Url 'http://127.0.0.1:8081/healthz'
+        Wait-Http -Url 'http://127.0.0.1:8082/healthz'
+    }
+    catch {
+        Write-Host ''
+        Write-Host 'Health check failed. Container status:' -ForegroundColor Yellow
+        & docker compose -f $composeFile ps -a | Out-Host
+        Write-Host ''
+        Write-Host 'Monitor logs:' -ForegroundColor Yellow
+        & docker compose -f $composeFile logs --no-color --tail=200 monitor | Out-Host
+        throw
+    }
     Show-Pass 'Monitor + UI + AI Ops + DORA are healthy'
 
     Write-Host ''
