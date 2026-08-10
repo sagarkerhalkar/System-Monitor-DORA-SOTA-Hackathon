@@ -1,0 +1,17 @@
+# Cross-platform repository normalization
+* text=auto
+
+# Linux/container scripts must never be checked out with CRLF.
+*.sh text eol=lf
+
+# Keep Windows-native scripts on CRLF for readability/tooling compatibility.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Structured/config files use LF consistently.
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf
