@@ -200,8 +200,15 @@ request = urllib.request.Request(
 with urllib.request.urlopen(request, timeout=5) as response:
     result = json.load(response)
 
-assert result.get("ok") and float(result.get("anomaly_score", 0)) >= 60, result
-print(json.dumps({"anomaly_score": result["anomaly_score"], "status": result["status"]}))
+assert result.get("ok"), result
+assert float(result.get("anomaly_score", 0)) >= 60, result
+assert result.get("health") in {"degraded", "critical"}, result
+assert result.get("model") == "robust-anomaly-v1", result
+print(json.dumps({
+    "anomaly_score": result["anomaly_score"],
+    "health": result["health"],
+    "model": result["model"],
+}))
 '@
 
     $previousErrorActionPreference = $ErrorActionPreference
@@ -250,17 +257,24 @@ request = urllib.request.Request(
     method="POST",
 )
 with urllib.request.urlopen(request, timeout=5) as response:
-    json.load(response)
+    deployment_result = json.load(response)
+
+assert deployment_result.get("ok"), deployment_result
+assert deployment_result.get("status") == "success", deployment_result
 
 with urllib.request.urlopen("http://127.0.0.1:8082/v1/metrics?environment=production&days=30", timeout=5) as response:
     metrics = json.load(response)
 
+assert metrics.get("ok"), metrics
 assert int(metrics.get("successful_deployments", 0)) >= 1, metrics
+assert metrics.get("median_lead_time_seconds") is not None, metrics
+assert "change_failure_rate_pct" in metrics, metrics
+assert "mean_time_to_recovery_seconds" in metrics, metrics
 print(json.dumps({
     "successful_deployments": metrics.get("successful_deployments"),
     "median_lead_time_seconds": metrics.get("median_lead_time_seconds"),
     "change_failure_rate_pct": metrics.get("change_failure_rate_pct"),
-    "mean_time_to_restore_seconds": metrics.get("mean_time_to_restore_seconds"),
+    "mean_time_to_recovery_seconds": metrics.get("mean_time_to_recovery_seconds"),
 }))
 '@
 
