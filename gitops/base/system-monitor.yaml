@@ -78,7 +78,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: monitor
-          image: 859934688742.dkr.ecr.ap-south-1.amazonaws.com/sagar-system-monitor/monitor@sha256:45bfcf9e543ee3fbe40e0ca056b2a24becedbc40585019f6d212869d5681414f
+          image: 859934688742.dkr.ecr.ap-south-1.amazonaws.com/sagar-system-monitor/monitor@sha256:4bd4abf6f7fcfe7bc7c325f4b00b1562a4714961fb252a1f97b496ea276dfb24
           imagePullPolicy: IfNotPresent
           env:
             - name: MONITOR_ADMIN_USERNAME
