@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first and continue from **EXACT NEXT STEP** without repeating completed work.
 
-**Last updated:** 2026-08-11 13:48 IST
+**Last updated:** 2026-08-11 13:53 IST
 
 ## Repository
 
@@ -14,7 +14,8 @@
   - `Hackathon 3.62 - Record private SSM shell checkpoint`
   - `Hackathon 3.63 - Record kubectl install checkpoint`
   - `Hackathon 3.64 - Record EKS kubeconfig checkpoint`
-- Next numbered implementation commit: **Hackathon 3.65**.
+  - `Hackathon 3.65 - Record private EKS connectivity checkpoint`
+- Next numbered implementation commit: **Hackathon 3.66**.
 
 ## Locked safety / architecture
 
@@ -132,23 +133,26 @@ Result:
 Added new context arn:aws:eks:ap-south-1:859934688742:cluster/sagar-system-monitor-hackathon to /home/ssm-user/.kube/config
 ```
 
-This proves the helper could call EKS DescribeCluster and create kubeconfig. Kubernetes API connectivity and node authorization are **not yet claimed** until the next command succeeds.
+### Private Kubernetes API / worker nodes — VERIFIED LIVE
+
+`kubectl get nodes -o wide` succeeded from the SSM-only private helper. This proves the helper can reach the private EKS Kubernetes API and is authorized through the temporary EKS access entry.
+
+Two worker nodes are healthy and `Ready`:
+
+- `ip-10-42-137-89.ap-south-1.compute.internal` — Kubernetes `v1.36.2-eks-254016e`, internal IP `10.42.137.89`, no external IP.
+- `ip-10-42-153-66.ap-south-1.compute.internal` — Kubernetes `v1.36.2-eks-254016e`, internal IP `10.42.153.66`, no external IP.
+
+Both run Amazon Linux 2023 and containerd.
 
 ## EXACT NEXT STEP
 
 **Do not redo any setup above. The user is already inside the SSM shell at `sh-5.2$`.**
 
-Run exactly:
+Clone or fast-forward the public hackathon repository onto the helper, then continue one command at a time.
 
-```bash
-kubectl get nodes -o wide
-```
+After the repository is available:
 
-Expected healthy outcome: two worker nodes listed with `STATUS` = `Ready`.
-
-Only after that succeeds:
-
-1. clone/pull `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`;
+1. verify the latest repo commit and the GitOps bootstrap script are present;
 2. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
 3. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
 4. verify pods, PVCs, and services in namespace `system-monitor`.
