@@ -3,7 +3,15 @@
 set -eu
 
 DATA_ROOT="${MONITOR_DATA_ROOT:-/data}"
-PORT="${MONITOR_PORT:-8443}"
+RAW_PORT="${MONITOR_LISTEN_PORT:-${MONITOR_PORT:-8443}}"
+case "$RAW_PORT" in
+  ''|*[!0-9]*) PORT=8443 ;;
+  *) PORT="$RAW_PORT" ;;
+esac
+if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+  echo "Monitor listen port must be between 1 and 65535." >&2
+  exit 2
+fi
 ORG_NAME="${MONITOR_ORG_NAME:-Sagar Monitor Hackathon}"
 ORG_ID="${MONITOR_ORG_ID:-sagar-monitor-hackathon}"
 ADMIN_USER="${MONITOR_ADMIN_USERNAME:-hackathon-admin}"
