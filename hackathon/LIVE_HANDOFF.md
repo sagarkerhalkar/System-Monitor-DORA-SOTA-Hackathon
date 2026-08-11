@@ -2,17 +2,18 @@
 
 **Purpose:** Single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first and continue from **EXACT NEXT STEP** without repeating completed work.
 
-**Last updated:** 2026-08-11 13:34 IST
+**Last updated:** 2026-08-11 13:40 IST
 
 ## Repository
 
 - Repo: `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`
 - Default branch: `main`
-- Implementation sequence through `Hackathon 3.59` completed before live handoff work.
-- `Hackathon 3.60 - Add live implementation handoff`
-- `Hackathon 3.61 - Record SSM online checkpoint`
-- `Hackathon 3.62 - Record private SSM shell checkpoint`
-- Next numbered implementation commit: **Hackathon 3.63**.
+- Live handoff commits:
+  - `Hackathon 3.60 - Add live implementation handoff`
+  - `Hackathon 3.61 - Record SSM online checkpoint`
+  - `Hackathon 3.62 - Record private SSM shell checkpoint`
+  - `Hackathon 3.63 - Record kubectl install checkpoint`
+- Next numbered implementation commit: **Hackathon 3.64**.
 
 ## Locked safety / architecture
 
@@ -35,28 +36,23 @@
 
 ## Terraform / AWS storage layer — VERIFIED LIVE
 
-EBS CSI was applied and verified with zero Terraform drift.
-
-- Terraform detailed-exitcode: `0`
+- Terraform detailed-exitcode after EBS CSI apply: `0`
 - EBS CSI add-on: `ACTIVE`
 - Version: `v1.63.1-eksbuild.1`
 - Pod Identity association exists.
 - IAM role: `sagar-system-monitor-hackathon-ebs-csi`
 - Attached policy: `AmazonEBSCSIDriverEKSClusterScopedPolicy`
-
-Applied resources exactly:
-
-- `aws_iam_role.ebs_csi`
-- `aws_iam_role_policy_attachment.ebs_csi_cluster_scoped`
-- `aws_eks_addon.ebs_csi`
-
-No EKS cluster, nodes, NAT, VPC, or ECR recreation occurred.
+- Applied resources exactly:
+  - `aws_iam_role.ebs_csi`
+  - `aws_iam_role_policy_attachment.ebs_csi_cluster_scoped`
+  - `aws_eks_addon.ebs_csi`
+- No EKS cluster, nodes, NAT, VPC, or ECR recreation occurred.
 
 ## Private-cluster access workaround
 
 AWS CloudShell VPC environment could not be created because AWS account verification is still in progress.
 
-Windows `kubectl` must not be used for this private-only cluster. It returned HTML `501 Unsupported method ('GET')`, indicating the local network/proxy path was not reaching the Kubernetes API.
+Windows `kubectl` must not be used for this private-only cluster; it returned HTML `501 Unsupported method ('GET')`.
 
 Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only through SSM Session Manager. No public IP and no inbound SSH.
 
@@ -79,45 +75,17 @@ Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only 
 - Temporary EKS ingress allows TCP/443 only from the admin SG.
 - Temporary EKS rule ID: `sgr-0d57d869bcc2806e6`
 
-### Temporary IAM role / instance profile
+### Temporary IAM / EKS access
 
-Role and instance profile:
-
-- `sagar-monitor-hackathon-admin-temp`
+- Role + instance profile: `sagar-monitor-hackathon-admin-temp`
 - Role ARN: `arn:aws:iam::859934688742:role/sagar-monitor-hackathon-admin-temp`
-
-Managed policy:
-
-- `AmazonSSMManagedInstanceCore`
-
-Inline policy:
-
-- `sagar-monitor-eks-bootstrap-temp`
-
-Validated permissions:
-
-- `eks:DescribeCluster`
-- `eks:DescribeAddon`
-- `secretsmanager:GetSecretValue`
-- `secretsmanager:PutSecretValue`
-
-Secret scope:
-
-- `arn:aws:secretsmanager:ap-south-1:859934688742:secret:/sagar-system-monitor/hackathon/monitor-admin-password-*`
-
-### Temporary EKS access
-
-Access entry principal:
-
-- `arn:aws:iam::859934688742:role/sagar-monitor-hackathon-admin-temp`
-- Type: `STANDARD`
-
-Associated access policy:
-
-- `arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy`
+- Managed policy: `AmazonSSMManagedInstanceCore`
+- Inline policy: `sagar-monitor-eks-bootstrap-temp`
+- Inline permissions validated for `eks:DescribeCluster`, `eks:DescribeAddon`, `secretsmanager:GetSecretValue`, `secretsmanager:PutSecretValue` scoped to the Monitor admin secret.
+- EKS access entry type: `STANDARD`
+- Associated access policy: `arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy`
 - Scope: cluster
-
-This access is temporary and must be removed after bootstrap.
+- This access is temporary and must be removed after bootstrap.
 
 ### Temporary EC2 helper
 
@@ -127,44 +95,38 @@ This access is temporary and must be removed after bootstrap.
 - Instance type: `t3.micro`
 - Subnet: `subnet-07bc456e2735f7255`
 - SG: `sg-06294fa8bddcd20ac`
-- Instance profile: `sagar-monitor-hackathon-admin-temp`
 - Public IP: none
 - IMDSv2 required
 - EC2 state: running
 
 ### SSM — VERIFIED LIVE
 
-SSM registration:
-
-- Instance: `i-04747f792cbfdec4d`
-- PingStatus: `Online`
+- SSM PingStatus: `Online`
 - Platform: `Amazon Linux`
 - SSM Agent: `3.3.4624.0`
+- Windows Session Manager Plugin installed and working.
+- Current shell is an active SSM shell on the helper with prompt `sh-5.2$`.
+- AWS identity inside helper verified as:
+  `arn:aws:sts::859934688742:assumed-role/sagar-monitor-hackathon-admin-temp/i-04747f792cbfdec4d`
 
-Windows Session Manager Plugin was installed and verified successfully.
+### kubectl — VERIFIED INSTALLED
 
-An SSM session is currently open from Windows PowerShell using:
+Initial `kubectl version --client` returned `command not found`.
 
-```powershell
-aws ssm start-session --region ap-south-1 --target i-04747f792cbfdec4d
-```
-
-The current shell prompt is:
+AWS EKS kubectl was downloaded to `/tmp`, checksum verification passed with:
 
 ```text
-sh-5.2$
+kubectl: OK
 ```
 
-AWS identity was verified inside that private helper:
+Installed to `$HOME/bin/kubectl`; current shell PATH includes `$HOME/bin`.
 
-```json
-{
-  "Account": "859934688742",
-  "Arn": "arn:aws:sts::859934688742:assumed-role/sagar-monitor-hackathon-admin-temp/i-04747f792cbfdec4d"
-}
+Verified version:
+
+```text
+Client Version: v1.35.3-eks-bbe087e
+Kustomize Version: v5.7.1
 ```
-
-Therefore private EC2 + SSM + temporary IAM role authentication is proven working.
 
 ## EXACT NEXT STEP
 
@@ -172,23 +134,20 @@ Therefore private EC2 + SSM + temporary IAM role authentication is proven workin
 
 Continue one command at a time.
 
-First check whether `kubectl` is installed:
+Next verify `git` and `openssl` are available:
 
 ```bash
-kubectl version --client
+git --version && openssl version
 ```
 
-If `kubectl` is missing, install a Kubernetes 1.36-compatible kubectl using the current official AWS/EKS instructions before continuing.
+Then:
 
-After kubectl is available:
-
-1. verify `git` and `openssl`;
-2. run `aws eks update-kubeconfig --region ap-south-1 --name sagar-system-monitor-hackathon`;
-3. prove `kubectl get nodes -o wide` works from this private instance;
-4. clone/pull `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`;
-5. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh` (the script works from this private helper because it needs AWS + kubectl + openssl + private EKS reachability);
-6. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
-7. verify pods, PVCs, and services in namespace `system-monitor`.
+1. run `aws eks update-kubeconfig --region ap-south-1 --name sagar-system-monitor-hackathon`;
+2. prove `kubectl get nodes -o wide` works from this private instance;
+3. clone/pull `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`;
+4. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
+5. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
+6. verify pods, PVCs, and services in namespace `system-monitor`.
 
 Do not claim GitOps is deployed until the bootstrap script reports success and resources are healthy.
 
