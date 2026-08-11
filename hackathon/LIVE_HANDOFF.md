@@ -2,13 +2,14 @@
 
 **Purpose:** Single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first and continue from **EXACT NEXT STEP** without repeating completed work.
 
-**Last updated:** 2026-08-11 15:23 IST
+**Last updated:** 2026-08-11 16:29 IST
 
 ## Repository
 
 - Repo: `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`
 - Default branch: `main`
-- Live handoff commits:
+- Permanent command/evidence log: `hackathon/COMMAND_AND_EVIDENCE_LOG.md`
+- Important recent commits:
   - `Hackathon 3.60 - Add live implementation handoff`
   - `Hackathon 3.61 - Record SSM online checkpoint`
   - `Hackathon 3.62 - Record private SSM shell checkpoint`
@@ -17,7 +18,25 @@
   - `Hackathon 3.65 - Record private EKS connectivity checkpoint`
   - `Hackathon 3.66 - Record helper repository clone checkpoint`
   - `Hackathon 3.67 - Record KMS bootstrap permission fix`
-- Next numbered implementation commit: **Hackathon 3.68**.
+  - `Hackathon 3.68 - Fix Kubernetes monitor port collision` — `fd0ab5cc3d3c33bfd39117b531fa06d08dc23a03`
+  - `Hackathon 3.69 - Update Monitor signed image digest` — `3d6c8241c5d2dad7d5f4227ba10fc9ef33814e60`
+  - `Hackathon 3.70 - Add command and evidence log` — `57ba705ba5ed4d68841ab021419ba1ecb4a21cdb`
+  - `Hackathon 3.71 - Update live handoff after Monitor fix` — this update
+- Next numbered implementation commit after this handoff: **Hackathon 3.72**.
+
+## Documentation rule — LOCKED
+
+From now on every meaningful live command must be recorded in `hackathon/COMMAND_AND_EVIDENCE_LOG.md` with:
+
+- date/time or checkpoint
+- exact command when captured
+- purpose
+- important output
+- result: SUCCESS / FAILED / EXPECTED ERROR / IN PROGRESS
+- what the output means
+- next action
+
+Record useful failed commands as well as successful commands. Never record secret values, passwords, tokens, or private keys. Never claim a test/deployment passed without evidence.
 
 ## Locked safety / architecture
 
@@ -30,13 +49,13 @@
 
 ## Completed application / supply-chain proof
 
-- Four-service Phase-1 stack verified: Monitor, UI, AI Ops, DORA.
+- Four-service Phase-1 stack verified locally: Monitor, UI, AI Ops, DORA.
 - Unit tests: 5/5 passed.
 - Phase-1 CI passed.
 - Supply-chain CI passed end-to-end with Trivy, CycloneDX SBOM, ECR, GitHub OIDC, Cosign signing/attestation/verification.
-- Digest-pinned Kubernetes base and Argo CD GitOps bootstrap already merged.
+- Digest-pinned Kubernetes base and Argo CD GitOps bootstrap merged.
 - GitOps CI passed.
-- Argo CD bootstrap is pinned to `v3.5.0`.
+- Argo CD bootstrap pinned to `v3.5.0`.
 
 ## Terraform / AWS storage layer — VERIFIED LIVE
 
@@ -46,17 +65,13 @@
 - Pod Identity association exists.
 - IAM role: `sagar-system-monitor-hackathon-ebs-csi`
 - Attached policy: `AmazonEBSCSIDriverEKSClusterScopedPolicy`
-- Applied resources exactly:
-  - `aws_iam_role.ebs_csi`
-  - `aws_iam_role_policy_attachment.ebs_csi_cluster_scoped`
-  - `aws_eks_addon.ebs_csi`
 - No EKS cluster, nodes, NAT, VPC, or ECR recreation occurred.
 
 ## Private-cluster access workaround
 
-AWS CloudShell VPC environment could not be created because AWS account verification is still in progress.
+AWS CloudShell VPC environment could not be created because AWS account verification was still in progress.
 
-Windows `kubectl` must not be used for this private-only cluster; it returned HTML `501 Unsupported method ('GET')`.
+Windows `kubectl` was not usable for this private-only cluster and returned HTML `501 Unsupported method ('GET')`.
 
 Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only through SSM Session Manager. No public IP and no inbound SSH.
 
@@ -65,147 +80,195 @@ Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only 
 ### Network
 
 - VPC: `vpc-0d939b2daac77a161`
-- VPC CIDR: `10.42.0.0/16`
 - Private subnet: `subnet-07bc456e2735f7255`
 - CIDR: `10.42.128.0/20`
 - AZ: `ap-south-1a`
 - NAT gateway route: `nat-0e681fb5f4bf59f92`
-
-### Security groups
-
 - EKS cluster SG: `sg-06e0da37d74acb793`
 - Temporary admin SG: `sg-06294fa8bddcd20ac`
-- Admin SG has no inbound rules.
-- Temporary EKS ingress allows TCP/443 only from the admin SG.
-- Temporary EKS rule ID: `sgr-0d57d869bcc2806e6`
+- Temporary EKS rule: `sgr-0d57d869bcc2806e6`, TCP/443 from temp admin SG only.
 
-### Temporary IAM / EKS access
+### IAM / EKS access
 
 - Role + instance profile: `sagar-monitor-hackathon-admin-temp`
 - Role ARN: `arn:aws:iam::859934688742:role/sagar-monitor-hackathon-admin-temp`
 - Managed policy: `AmazonSSMManagedInstanceCore`
 - Inline policy: `sagar-monitor-eks-bootstrap-temp`
-- Inline permissions verified for `eks:DescribeCluster`, `eks:DescribeAddon`, `secretsmanager:GetSecretValue`, `secretsmanager:PutSecretValue` scoped to the Monitor admin secret.
-- After the first bootstrap attempt failed at Secrets Manager with `AccessDeniedException: Access to KMS is not allowed`, the same temporary inline policy was extended with only:
-  - `kms:GenerateDataKey`
-  - `kms:Decrypt`
-- Those KMS actions are scoped only to platform key:
-  `arn:aws:kms:ap-south-1:859934688742:key/2e010c48-d182-4084-80be-1e70db88cb60`
-- The updated inline policy was read back with `aws iam get-role-policy` and both KMS actions were present.
+- KMS actions temporarily added: `kms:GenerateDataKey`, `kms:Decrypt`
+- KMS scope only: `arn:aws:kms:ap-south-1:859934688742:key/2e010c48-d182-4084-80be-1e70db88cb60`
 - EKS access entry type: `STANDARD`
-- Associated access policy: `arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy`
-- Scope: cluster
-- This access is temporary and must be removed after bootstrap.
+- Associated EKS policy: `AmazonEKSClusterAdminPolicy`, cluster scope.
+- This entire helper access is temporary and must be removed after GitOps evidence is complete.
 
-### Temporary EC2 helper
+### EC2 / SSM
 
-- AMI: `ami-0d15e9052c94acb75` (Amazon Linux 2023)
-- Instance ID: `i-04747f792cbfdec4d`
+- Instance: `i-04747f792cbfdec4d`
 - Private IP: `10.42.128.175`
-- Instance type: `t3.micro`
-- Subnet: `subnet-07bc456e2735f7255`
-- SG: `sg-06294fa8bddcd20ac`
-- Public IP: none
+- Type: `t3.micro`
+- AMI: Amazon Linux 2023 `ami-0d15e9052c94acb75`
+- No public IP
 - IMDSv2 required
-- EC2 state: running
-
-### SSM — VERIFIED LIVE
-
 - SSM PingStatus: `Online`
-- Platform: `Amazon Linux`
-- SSM Agent: `3.3.4624.0`
-- Windows Session Manager Plugin installed and working.
-- AWS identity inside helper verified as:
-  `arn:aws:sts::859934688742:assumed-role/sagar-monitor-hackathon-admin-temp/i-04747f792cbfdec4d`
+- Verified identity: `arn:aws:sts::859934688742:assumed-role/sagar-monitor-hackathon-admin-temp/i-04747f792cbfdec4d`
 
-### Helper tools — VERIFIED
+### Helper tools
 
-- kubectl installed and checksum verified.
-- kubectl: `v1.35.3-eks-bbe087e`
-- Kustomize: `v5.7.1`
-- git installed: `2.50.1`
-- OpenSSL: `3.5.7 9 Jun 2026`
+- kubectl `v1.35.3-eks-bbe087e`
+- Kustomize `v5.7.1`
+- git `2.50.1`
+- OpenSSL `3.5.7 9 Jun 2026`
 
-### EKS kubeconfig — VERIFIED CREATED
+## Private EKS API — VERIFIED
 
-Ran successfully from the private helper:
+Exact kubeconfig command succeeded:
 
 ```bash
 aws eks update-kubeconfig --region ap-south-1 --name sagar-system-monitor-hackathon
 ```
 
-Result:
+Two worker nodes are `Ready` with no external IP:
 
-```text
-Added new context arn:aws:eks:ap-south-1:859934688742:cluster/sagar-system-monitor-hackathon to /home/ssm-user/.kube/config
-```
+- `ip-10-42-137-89.ap-south-1.compute.internal`, internal IP `10.42.137.89`
+- `ip-10-42-153-66.ap-south-1.compute.internal`, internal IP `10.42.153.66`
 
-### Private Kubernetes API / worker nodes — VERIFIED LIVE
+## First Argo bootstrap — FAILED SAFELY AT KMS
 
-`kubectl get nodes -o wide` succeeded from the SSM-only private helper. This proves the helper can reach the private EKS Kubernetes API and is authorized through the temporary EKS access entry.
-
-Two worker nodes are healthy and `Ready`:
-
-- `ip-10-42-137-89.ap-south-1.compute.internal` — Kubernetes `v1.36.2-eks-254016e`, internal IP `10.42.137.89`, no external IP.
-- `ip-10-42-153-66.ap-south-1.compute.internal` — Kubernetes `v1.36.2-eks-254016e`, internal IP `10.42.153.66`, no external IP.
-
-Both run Amazon Linux 2023 and containerd.
-
-### Hackathon repository on helper — CLONED
-
-The public repository was cloned successfully onto the private helper at:
-
-```text
-/home/ssm-user/System-Monitor-DORA-SOTA-Hackathon
-```
-
-The helper clone was fast-forwarded to `Hackathon 3.66`, and the Argo bootstrap script was verified present.
-
-### First Argo bootstrap attempt — FAILED SAFELY AT KMS
-
-`bash gitops/scripts/bootstrap-argocd-cloudshell.sh` reached all of these successfully:
-
-- AWS identity verification
-- kubeconfig refresh
-- private Kubernetes API connectivity
-- both worker nodes `Ready`
-- EBS CSI add-on verification
-- namespace creation for `argocd` and `system-monitor`
-
-It then failed while preparing the Monitor runtime password in AWS Secrets Manager:
+`bash gitops/scripts/bootstrap-argocd-cloudshell.sh` passed identity, private API, nodes, EBS CSI, and namespace preparation, then stopped with:
 
 ```text
 An error occurred (AccessDeniedException) when calling the PutSecretValue operation: Access to KMS is not allowed
 ```
 
-No GitOps deployment success is claimed from this attempt. Argo CD installation had not yet begun at the point of failure.
+The temporary role was then given only the required `kms:GenerateDataKey` and `kms:Decrypt` actions on the exact platform KMS key.
 
-The exact platform KMS key ARN was then retrieved from Terraform output:
+## Second Argo bootstrap — GITOPS WORKED, WORKLOAD HEALTH FAILED
+
+The retry successfully:
+
+- stored/generated the Monitor admin password in Secrets Manager
+- created Kubernetes secret `monitor-runtime`
+- installed Argo CD v3.5.0
+- completed argocd-server, repo-server, applicationset-controller rollouts
+- created AppProject and Application
+- completed Argo sync operation successfully
+
+Argo became `Synced`, but health progressed to `Degraded` because Monitor entered CrashLoopBackOff. AI Ops, DORA, and UI were running. Both EBS PVCs were `Bound`.
+
+## Monitor CrashLoopBackOff — ROOT CAUSE PROVEN
+
+Previous Monitor logs returned:
 
 ```text
-arn:aws:kms:ap-south-1:859934688742:key/2e010c48-d182-4084-80be-1e70db88cb60
+{"error": "server configuration is not valid JSON", "ok": false}
 ```
 
-The temporary IAM role now has the required narrowly scoped KMS permissions, verified by read-back.
+Source tracing found `load_server_config(arguments.config)` in the commercial CLI.
+
+Kubernetes did not override pod command/args, proving the image ENTRYPOINT was used.
+
+Direct `kubectl exec` failed because the Monitor container died too quickly:
+
+```text
+error: unable to upgrade connection: container not found ("monitor")
+```
+
+A temporary read-only inspection pod mounted the `monitor-data` PVC. Reading `/inspect/server.json` proved the exact malformed field:
+
+```text
+"port": tcp://172.20.177.2:8443,
+```
+
+### Exact root cause
+
+The Kubernetes Service is named `monitor`. Kubernetes service links automatically injected a `MONITOR_PORT` environment variable containing a service URL such as:
+
+```text
+tcp://172.20.177.2:8443
+```
+
+The Monitor entrypoint also used `MONITOR_PORT` as its numeric application listen port, so it generated invalid JSON.
+
+The diagnostic pod was then deleted successfully so it no longer held the EBS volume.
+
+## Hackathon 3.68 — PORT COLLISION FIX
+
+Commit:
+
+```text
+fd0ab5cc3d3c33bfd39117b531fa06d08dc23a03
+```
+
+The entrypoint now prefers `MONITOR_LISTEN_PORT`, validates numeric input, and safely falls back to 8443 if Kubernetes injects a non-numeric service URL through `MONITOR_PORT`.
+
+For this commit:
+
+```text
+Hackathon Phase 1 CI              completed success
+Hackathon Container Supply Chain completed success
+```
+
+Run IDs:
+
+```text
+31483388324  Hackathon Phase 1 CI
+31483388301  Hackathon Container Supply Chain
+```
+
+Corrected signed Monitor image:
+
+```text
+859934688742.dkr.ecr.ap-south-1.amazonaws.com/sagar-system-monitor/monitor@sha256:4bd4abf6f7fcfe7bc7c325f4b00b1562a4714961fb252a1f97b496ea276dfb24
+```
+
+## Hackathon 3.69 — GITOPS DIGEST UPDATED
+
+Commit:
+
+```text
+3d6c8241c5d2dad7d5f4227ba10fc9ef33814e60
+```
+
+Only the Monitor image digest was changed in `gitops/base/system-monitor.yaml`. AI Ops, DORA, UI, PVCs, services, and production were not changed.
+
+## CURRENT LIVE ARGO STATE
+
+Latest exact command:
+
+```bash
+kubectl -n argocd get application system-monitor -o wide
+```
+
+Latest exact output:
+
+```text
+NAME             SYNC STATUS   HEALTH STATUS   REVISION                                   PROJECT
+system-monitor   Synced        Progressing     3d6c8241c5d2dad7d5f4227ba10fc9ef33814e60   system-monitor
+```
+
+### Interpretation
+
+- Argo CD has detected and synced Hackathon 3.69.
+- The corrected signed Monitor digest is now the desired GitOps state.
+- Health is still `Progressing`.
+- **Do not claim full GitOps success yet.**
 
 ## EXACT NEXT STEP
 
-The user is currently in a fresh Windows PowerShell after fixing the temporary IAM policy.
+The user is already at the helper prompt `sh-5.2$` in `~/System-Monitor-DORA-SOTA-Hackathon`.
 
-Reconnect to the private helper through SSM Session Manager. If a prior SSM shell is still open, reuse it; otherwise start a new session to instance `i-04747f792cbfdec4d`.
+Run exactly:
 
-After reaching `sh-5.2$`:
+```bash
+kubectl -n system-monitor get pods -o wide
+```
 
-1. if this is a new SSM session, run `export PATH="$HOME/bin:$PATH"` so the previously installed kubectl is available;
-2. `cd ~/System-Monitor-DORA-SOTA-Hackathon`;
-3. `git pull --ff-only` so the helper gets `Hackathon 3.67`;
-4. rerun `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
-5. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
-6. verify pods, PVCs, and services in namespace `system-monitor`.
+Purpose: verify whether the new Monitor pod using the corrected signed digest becomes `1/1 Running` and check all other workload pods.
 
-Do not claim GitOps is deployed until the bootstrap script reports success and resources are healthy.
+If Monitor is not healthy, inspect its current/previous logs and pod events. If all pods are healthy, check the Argo Application again and require `Synced` + `Healthy`, then rerun/complete bootstrap evidence.
 
-## Temporary helper cleanup — REQUIRED AFTER ARGO BOOTSTRAP
+Every command/output from this point must also be appended to `hackathon/COMMAND_AND_EVIDENCE_LOG.md`.
+
+## Temporary helper cleanup — REQUIRED AFTER ARGO HEALTHY EVIDENCE
 
 After Argo CD and System Monitor are proven healthy:
 
@@ -224,17 +287,17 @@ Do not delete the permanent EBS CSI role/add-on.
 
 ## Remaining hackathon sequence after GitOps
 
-1. Argo Rollouts `v1.9.1` with canary stages 10% -> 25% -> 50% -> 100%.
-2. Prometheus analysis gate for AI Ops canary and automatic abort/rollback.
-3. DORA deployment/incident/recovery event automation and dashboard.
-4. Kyverno policy-as-code with digest pinning and Cosign verification.
-5. Prometheus/Grafana/Alertmanager observability; Loki/Tempo/OTel only if time permits.
-6. External demo/live URL without exposing EKS API publicly.
-7. Intentional bad AI canary -> analysis failure -> rollback -> incident/recovery -> CFR/MTTR update.
-8. Final DORA/SOTA report, architecture/evidence, recorded demo, submission.
+1. Argo Rollouts `v1.9.1` with canary 10% -> 25% -> 50% -> 100%.
+2. Prometheus analysis gate and automatic abort/rollback for a bad AI Ops canary.
+3. DORA deployment/incident/recovery automation and dashboard.
+4. Kyverno policy-as-code: digest/non-root/restricted plus Cosign verification.
+5. Prometheus/Grafana/Alertmanager; Loki/Tempo/OTel only if time permits.
+6. External demo URL without making EKS API public.
+7. Intentional bad AI canary -> failure -> rollback -> incident/recovery -> CFR/MTTR evidence.
+8. Final DORA/SOTA report, architecture/evidence, demo recording, submission.
 
 ## New-chat continuation rule
 
 In a new chat say:
 
-> Read `hackathon/LIVE_HANDOFF.md` from `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon` and continue from EXACT NEXT STEP. Do not repeat completed work.
+> Read `hackathon/LIVE_HANDOFF.md` and `hackathon/COMMAND_AND_EVIDENCE_LOG.md` from `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon` and continue from EXACT NEXT STEP. Do not repeat completed work.
