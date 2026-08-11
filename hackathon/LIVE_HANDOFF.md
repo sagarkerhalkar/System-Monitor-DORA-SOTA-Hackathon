@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first and continue from **EXACT NEXT STEP** without repeating completed work.
 
-**Last updated:** 2026-08-11 13:53 IST
+**Last updated:** 2026-08-11 13:56 IST
 
 ## Repository
 
@@ -15,7 +15,8 @@
   - `Hackathon 3.63 - Record kubectl install checkpoint`
   - `Hackathon 3.64 - Record EKS kubeconfig checkpoint`
   - `Hackathon 3.65 - Record private EKS connectivity checkpoint`
-- Next numbered implementation commit: **Hackathon 3.66**.
+  - `Hackathon 3.66 - Record helper repository clone checkpoint`
+- Next numbered implementation commit: **Hackathon 3.67**.
 
 ## Locked safety / architecture
 
@@ -144,15 +145,31 @@ Two worker nodes are healthy and `Ready`:
 
 Both run Amazon Linux 2023 and containerd.
 
+### Hackathon repository on helper — CLONED
+
+The public repository was cloned successfully onto the private helper at:
+
+```text
+/home/ssm-user/System-Monitor-DORA-SOTA-Hackathon
+```
+
+Clone completed with all objects received and deltas resolved. The exact checked-out commit is the next verification step because `Hackathon 3.66` was created after the clone completed.
+
 ## EXACT NEXT STEP
 
 **Do not redo any setup above. The user is already inside the SSM shell at `sh-5.2$`.**
 
-Clone or fast-forward the public hackathon repository onto the helper, then continue one command at a time.
+Verify the helper clone's current checked-out commit:
 
-After the repository is available:
+```bash
+cd ~/System-Monitor-DORA-SOTA-Hackathon && git log -1 --oneline
+```
 
-1. verify the latest repo commit and the GitOps bootstrap script are present;
+If it predates `Hackathon 3.66`, fast-forward it with `git pull --ff-only` before bootstrapping.
+
+Then:
+
+1. verify the GitOps bootstrap script is present;
 2. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
 3. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
 4. verify pods, PVCs, and services in namespace `system-monitor`.
