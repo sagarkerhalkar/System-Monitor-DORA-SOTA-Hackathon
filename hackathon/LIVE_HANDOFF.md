@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first and continue from **EXACT NEXT STEP** without repeating completed work.
 
-**Last updated:** 2026-08-11 13:40 IST
+**Last updated:** 2026-08-11 13:48 IST
 
 ## Repository
 
@@ -13,7 +13,8 @@
   - `Hackathon 3.61 - Record SSM online checkpoint`
   - `Hackathon 3.62 - Record private SSM shell checkpoint`
   - `Hackathon 3.63 - Record kubectl install checkpoint`
-- Next numbered implementation commit: **Hackathon 3.64**.
+  - `Hackathon 3.64 - Record EKS kubeconfig checkpoint`
+- Next numbered implementation commit: **Hackathon 3.65**.
 
 ## Locked safety / architecture
 
@@ -109,45 +110,48 @@ Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only 
 - AWS identity inside helper verified as:
   `arn:aws:sts::859934688742:assumed-role/sagar-monitor-hackathon-admin-temp/i-04747f792cbfdec4d`
 
-### kubectl — VERIFIED INSTALLED
+### Helper tools — VERIFIED
 
-Initial `kubectl version --client` returned `command not found`.
+- kubectl installed and checksum verified.
+- kubectl: `v1.35.3-eks-bbe087e`
+- Kustomize: `v5.7.1`
+- git installed: `2.50.1`
+- OpenSSL: `3.5.7 9 Jun 2026`
 
-AWS EKS kubectl was downloaded to `/tmp`, checksum verification passed with:
+### EKS kubeconfig — VERIFIED CREATED
 
-```text
-kubectl: OK
+Ran successfully from the private helper:
+
+```bash
+aws eks update-kubeconfig --region ap-south-1 --name sagar-system-monitor-hackathon
 ```
 
-Installed to `$HOME/bin/kubectl`; current shell PATH includes `$HOME/bin`.
-
-Verified version:
+Result:
 
 ```text
-Client Version: v1.35.3-eks-bbe087e
-Kustomize Version: v5.7.1
+Added new context arn:aws:eks:ap-south-1:859934688742:cluster/sagar-system-monitor-hackathon to /home/ssm-user/.kube/config
 ```
+
+This proves the helper could call EKS DescribeCluster and create kubeconfig. Kubernetes API connectivity and node authorization are **not yet claimed** until the next command succeeds.
 
 ## EXACT NEXT STEP
 
 **Do not redo any setup above. The user is already inside the SSM shell at `sh-5.2$`.**
 
-Continue one command at a time.
-
-Next verify `git` and `openssl` are available:
+Run exactly:
 
 ```bash
-git --version && openssl version
+kubectl get nodes -o wide
 ```
 
-Then:
+Expected healthy outcome: two worker nodes listed with `STATUS` = `Ready`.
 
-1. run `aws eks update-kubeconfig --region ap-south-1 --name sagar-system-monitor-hackathon`;
-2. prove `kubectl get nodes -o wide` works from this private instance;
-3. clone/pull `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`;
-4. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
-5. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
-6. verify pods, PVCs, and services in namespace `system-monitor`.
+Only after that succeeds:
+
+1. clone/pull `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`;
+2. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
+3. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
+4. verify pods, PVCs, and services in namespace `system-monitor`.
 
 Do not claim GitOps is deployed until the bootstrap script reports success and resources are healthy.
 
