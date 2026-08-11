@@ -144,6 +144,63 @@ pod "monitor-db-check" deleted from system-monitor namespace
 - The attach warning occurred because the short-lived container completed before interactive attach; Kubernetes then streamed the logs, which contained the required result.
 - We can safely fix/rotate the bootstrap password path and let the first successful Monitor start create the database normally.
 
+---
+
+## Checkpoint 5 — Locate and confirm the commercial password policy
+
+**Local time:** approximately 2026-08-11 16:58 IST
+
+### Command
+
+```bash
+grep -Rni --exclude-dir=.git "password must contain at least three character classes" commercial
+```
+
+### Exact output
+
+```text
+commercial/sagar_monitor/security/foundation.py:64:        raise ValueError("password must contain at least three character classes")
+```
+
+### Result
+
+`SUCCESS`
+
+### Source verification
+
+`commercial/sagar_monitor/security/foundation.py` defines:
+
+```text
+PASSWORD_MIN_LENGTH = 14
+```
+
+and counts these four character classes:
+
+```text
+lowercase
+uppercase
+digit
+non-alphanumeric / special character
+```
+
+At least **three of the four classes** are required. Known common/default passwords are also rejected.
+
+### Root cause confirmation
+
+The bootstrap script generated the first secret with:
+
+```bash
+openssl rand -hex 24
+```
+
+Hex output guarantees only lowercase hexadecimal letters plus digits, i.e. only two character classes. Therefore the generator itself was incompatible with the application policy.
+
 ### Exact next action
 
-Locate the exact commercial password-policy implementation and confirm all requirements before changing the password generator and existing stored secret.
+Permanently fix `gitops/scripts/bootstrap-argocd-cloudshell.sh` so that it:
+
+1. generates a password that is at least 14 characters and guarantees at least three classes;
+2. validates an existing Secrets Manager value without printing it;
+3. rotates an existing value when it does not satisfy the policy;
+4. applies the resulting value to Kubernetes secret `monitor-runtime` without logging the password;
+5. preserves the private-only EKS design and makes no production change.
