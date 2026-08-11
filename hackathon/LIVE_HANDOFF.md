@@ -2,15 +2,16 @@
 
 **Purpose:** This is the single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first before giving commands or making changes.
 
-**Last updated:** 2026-08-11 IST
+**Last updated:** 2026-08-11 13:25 IST
 
 ## Repository
 
 - Repo: `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`
 - Default branch: `main`
-- Previous main HEAD before this handoff file: `c555235064fde2c8a4b27c1a9529197cc7b7b9c6`
-- Commit sequence was through `Hackathon 3.59`; this file is committed as `Hackathon 3.60 - Add live implementation handoff`.
-- Next numbered implementation commit after this handoff is **Hackathon 3.61**.
+- Previous implementation sequence was through `Hackathon 3.59`.
+- `Hackathon 3.60 - Add live implementation handoff` created this file.
+- `Hackathon 3.61 - Record SSM online checkpoint` records the current live AWS checkpoint.
+- Next numbered implementation commit after this checkpoint is **Hackathon 3.62**.
 
 ## Locked architecture / safety
 
@@ -132,11 +133,11 @@ This is temporary and must be removed after bootstrap.
 
 ### Temporary EC2 helper
 
-AMI lookup returned current Amazon Linux 2023 image:
+AMI:
 
-- `ami-0d15e9052c94acb75`
+- `ami-0d15e9052c94acb75` (Amazon Linux 2023)
 
-Temporary EC2 created:
+Temporary EC2:
 
 - Instance ID: `i-04747f792cbfdec4d`
 - Private IP: `10.42.128.175`
@@ -147,38 +148,39 @@ Temporary EC2 created:
 - Public IP: none
 - IMDSv2 required
 - Tag Name: `sagar-monitor-hackathon-admin-temp`
+- EC2 state: `running`
 
-Last completed command:
+### SSM registration — VERIFIED LIVE
 
-```powershell
-aws ec2 wait instance-running --region ap-south-1 --instance-ids i-04747f792cbfdec4d
-```
-
-It returned successfully to the PowerShell prompt with no error, so the EC2 instance reached the `running` state.
-
-## EXACT NEXT STEP
-
-Do not redo any of the setup above.
-
-The next action is to verify that the temporary EC2 has registered with Systems Manager and is `Online`.
-
-From the user's normal Windows PowerShell, run:
+The following command was run successfully from Windows PowerShell:
 
 ```powershell
 aws ssm describe-instance-information --region ap-south-1 --filters Key=InstanceIds,Values=i-04747f792cbfdec4d --query "InstanceInformationList[].{InstanceId:InstanceId,PingStatus:PingStatus,Platform:PlatformName,AgentVersion:AgentVersion}" --output table
 ```
 
-Desired result:
+Verified result:
 
-- Instance ID `i-04747f792cbfdec4d`
-- `PingStatus` = `Online`
+- Instance ID: `i-04747f792cbfdec4d`
+- PingStatus: `Online`
+- Platform: `Amazon Linux`
+- SSM Agent version: `3.3.4624.0`
 
-If it is not listed yet, diagnose SSM registration; do not recreate the instance immediately.
+## EXACT NEXT STEP
 
-Once SSM is Online, open a Session Manager shell to the private instance, then:
+Do not redo any setup above.
 
-1. prove AWS identity is the temporary role;
-2. install/verify `kubectl`, `git`, `openssl` as needed;
+From the user's normal Windows PowerShell, open an SSM Session Manager shell to the private helper:
+
+```powershell
+aws ssm start-session --region ap-south-1 --target i-04747f792cbfdec4d
+```
+
+Desired result is an interactive shell on the Amazon Linux helper, not a Windows `PS C:\...>` prompt.
+
+Once the SSM shell opens, continue one command at a time:
+
+1. prove AWS identity is the temporary role with `aws sts get-caller-identity`;
+2. verify/install `kubectl`, `git`, and `openssl` as needed;
 3. run `aws eks update-kubeconfig --region ap-south-1 --name sagar-system-monitor-hackathon`;
 4. prove `kubectl get nodes -o wide` works from the private instance;
 5. clone/pull `sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon`;
