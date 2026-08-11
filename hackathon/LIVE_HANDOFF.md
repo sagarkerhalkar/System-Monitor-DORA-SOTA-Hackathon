@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for continuing the hackathon in a new ChatGPT chat. Read this file first and continue from **EXACT NEXT STEP** without repeating completed work.
 
-**Last updated:** 2026-08-11 13:56 IST
+**Last updated:** 2026-08-11 15:23 IST
 
 ## Repository
 
@@ -16,7 +16,8 @@
   - `Hackathon 3.64 - Record EKS kubeconfig checkpoint`
   - `Hackathon 3.65 - Record private EKS connectivity checkpoint`
   - `Hackathon 3.66 - Record helper repository clone checkpoint`
-- Next numbered implementation commit: **Hackathon 3.67**.
+  - `Hackathon 3.67 - Record KMS bootstrap permission fix`
+- Next numbered implementation commit: **Hackathon 3.68**.
 
 ## Locked safety / architecture
 
@@ -84,7 +85,13 @@ Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only 
 - Role ARN: `arn:aws:iam::859934688742:role/sagar-monitor-hackathon-admin-temp`
 - Managed policy: `AmazonSSMManagedInstanceCore`
 - Inline policy: `sagar-monitor-eks-bootstrap-temp`
-- Inline permissions validated for `eks:DescribeCluster`, `eks:DescribeAddon`, `secretsmanager:GetSecretValue`, `secretsmanager:PutSecretValue` scoped to the Monitor admin secret.
+- Inline permissions verified for `eks:DescribeCluster`, `eks:DescribeAddon`, `secretsmanager:GetSecretValue`, `secretsmanager:PutSecretValue` scoped to the Monitor admin secret.
+- After the first bootstrap attempt failed at Secrets Manager with `AccessDeniedException: Access to KMS is not allowed`, the same temporary inline policy was extended with only:
+  - `kms:GenerateDataKey`
+  - `kms:Decrypt`
+- Those KMS actions are scoped only to platform key:
+  `arn:aws:kms:ap-south-1:859934688742:key/2e010c48-d182-4084-80be-1e70db88cb60`
+- The updated inline policy was read back with `aws iam get-role-policy` and both KMS actions were present.
 - EKS access entry type: `STANDARD`
 - Associated access policy: `arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy`
 - Scope: cluster
@@ -108,7 +115,6 @@ Fallback: temporary private Amazon Linux 2023 EC2 management host accessed only 
 - Platform: `Amazon Linux`
 - SSM Agent: `3.3.4624.0`
 - Windows Session Manager Plugin installed and working.
-- Current shell is an active SSM shell on the helper with prompt `sh-5.2$`.
 - AWS identity inside helper verified as:
   `arn:aws:sts::859934688742:assumed-role/sagar-monitor-hackathon-admin-temp/i-04747f792cbfdec4d`
 
@@ -153,26 +159,49 @@ The public repository was cloned successfully onto the private helper at:
 /home/ssm-user/System-Monitor-DORA-SOTA-Hackathon
 ```
 
-Clone completed with all objects received and deltas resolved. The exact checked-out commit is the next verification step because `Hackathon 3.66` was created after the clone completed.
+The helper clone was fast-forwarded to `Hackathon 3.66`, and the Argo bootstrap script was verified present.
+
+### First Argo bootstrap attempt — FAILED SAFELY AT KMS
+
+`bash gitops/scripts/bootstrap-argocd-cloudshell.sh` reached all of these successfully:
+
+- AWS identity verification
+- kubeconfig refresh
+- private Kubernetes API connectivity
+- both worker nodes `Ready`
+- EBS CSI add-on verification
+- namespace creation for `argocd` and `system-monitor`
+
+It then failed while preparing the Monitor runtime password in AWS Secrets Manager:
+
+```text
+An error occurred (AccessDeniedException) when calling the PutSecretValue operation: Access to KMS is not allowed
+```
+
+No GitOps deployment success is claimed from this attempt. Argo CD installation had not yet begun at the point of failure.
+
+The exact platform KMS key ARN was then retrieved from Terraform output:
+
+```text
+arn:aws:kms:ap-south-1:859934688742:key/2e010c48-d182-4084-80be-1e70db88cb60
+```
+
+The temporary IAM role now has the required narrowly scoped KMS permissions, verified by read-back.
 
 ## EXACT NEXT STEP
 
-**Do not redo any setup above. The user is already inside the SSM shell at `sh-5.2$`.**
+The user is currently in a fresh Windows PowerShell after fixing the temporary IAM policy.
 
-Verify the helper clone's current checked-out commit:
+Reconnect to the private helper through SSM Session Manager. If a prior SSM shell is still open, reuse it; otherwise start a new session to instance `i-04747f792cbfdec4d`.
 
-```bash
-cd ~/System-Monitor-DORA-SOTA-Hackathon && git log -1 --oneline
-```
+After reaching `sh-5.2$`:
 
-If it predates `Hackathon 3.66`, fast-forward it with `git pull --ff-only` before bootstrapping.
-
-Then:
-
-1. verify the GitOps bootstrap script is present;
-2. run `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
-3. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
-4. verify pods, PVCs, and services in namespace `system-monitor`.
+1. if this is a new SSM session, run `export PATH="$HOME/bin:$PATH"` so the previously installed kubectl is available;
+2. `cd ~/System-Monitor-DORA-SOTA-Hackathon`;
+3. `git pull --ff-only` so the helper gets `Hackathon 3.67`;
+4. rerun `bash gitops/scripts/bootstrap-argocd-cloudshell.sh`;
+5. require Argo CD Application `system-monitor` to become `Synced` and `Healthy`;
+6. verify pods, PVCs, and services in namespace `system-monitor`.
 
 Do not claim GitOps is deployed until the bootstrap script reports success and resources are healthy.
 
