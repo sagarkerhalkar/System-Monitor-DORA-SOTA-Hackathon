@@ -6,7 +6,7 @@ AWS_REGION="ap-south-1"
 CLUSTER_NAME="sagar-system-monitor-hackathon"
 ARGOCD_VERSION="v3.5.0"
 MONITOR_SECRET_ID="/sagar-system-monitor/hackathon/monitor-admin-password"
-MONITOR_PASSWORD_MIN_LENGTH=8
+MONITOR_PASSWORD_MIN_LENGTH=14
 
 log() {
   printf '\n[%s] %s\n' "$(date -u +%H:%M:%S)" "$*"
