@@ -1,0 +1,57 @@
+name: Hackathon Argo Rollouts CI
+
+on:
+  pull_request:
+    paths:
+      - 'gitops/scripts/bootstrap-argo-rollouts.sh'
+      - '.github/workflows/hackathon-rollouts-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'gitops/scripts/bootstrap-argo-rollouts.sh'
+      - '.github/workflows/hackathon-rollouts-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-rollouts-bootstrap:
+    name: Validate Argo Rollouts bootstrap
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Validate Bash syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n gitops/scripts/bootstrap-argo-rollouts.sh
+
+      - name: Enforce pinned Rollouts contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          script="gitops/scripts/bootstrap-argo-rollouts.sh"
+
+          grep -F 'ARGO_ROLLOUTS_VERSION="v1.9.1"' "$script"
+          grep -F 'ARGO_ROLLOUTS_MANIFEST_SHA256="78c82343803c2bbc13a36049e269a532dd67f25b7e2cb3603c99e31d8d8a40b5"' "$script"
+          grep -F 'sha256sum -c -' "$script"
+          grep -F 'rollouts.argoproj.io' "$script"
+          grep -F 'analysistemplates.argoproj.io' "$script"
+          grep -F 'analysisruns.argoproj.io' "$script"
+          grep -F 'experiments.argoproj.io' "$script"
+
+          if grep -q ':latest' "$script"; then
+            echo "Floating :latest tag is forbidden"
+            exit 1
+          fi
+
+          echo "Argo Rollouts bootstrap contracts passed"
