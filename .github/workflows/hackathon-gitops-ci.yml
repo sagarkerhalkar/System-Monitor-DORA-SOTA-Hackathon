@@ -82,6 +82,36 @@ jobs:
               if token not in base:
                   raise SystemExit(f'Missing GitOps security/storage contract: {token}')
 
+          ai_match = re.search(
+              r'apiVersion:\s+argoproj\.io/v1alpha1\s+kind:\s+Rollout\s+metadata:\s+name:\s+ai-ops\b(.*?)(?=\n---\n)',
+              base,
+              re.S,
+          )
+          if not ai_match:
+              raise SystemExit('AI Ops must be managed by an Argo Rollout')
+
+          ai_rollout = ai_match.group(0)
+          required_rollout = [
+              'replicas: 20',
+              'maxSurge: 25%',
+              'maxUnavailable: 0',
+              'setWeight: 10',
+              'setWeight: 25',
+              'setWeight: 50',
+              'setWeight: 100',
+              'hackathon.sagarkerhalkar.com/canary-revision:',
+          ]
+          for token in required_rollout:
+              if token not in ai_rollout:
+                  raise SystemExit(f'Missing AI Ops Rollout contract: {token}')
+
+          if re.search(
+              r'apiVersion:\s+apps/v1\s+kind:\s+Deployment\s+metadata:\s+name:\s+ai-ops\b',
+              base,
+              re.S,
+          ):
+              raise SystemExit('Legacy AI Ops Deployment must not remain in GitOps base')
+
           required_bootstrap = [
               'https://github.com/sagarkerhalkar/System-Monitor-DORA-SOTA-Hackathon.git',
               'https://kubernetes.default.svc',
@@ -89,6 +119,7 @@ jobs:
               'path: gitops/base',
               'prune: true',
               'selfHeal: true',
+              'PruneLast=true',
           ]
           for token in required_bootstrap:
               if token not in bootstrap:
@@ -97,5 +128,5 @@ jobs:
           if 'ARGOCD_VERSION="v3.5.0"' not in script:
               raise SystemExit('Argo CD bootstrap version must be pinned to v3.5.0')
 
-          print('GitOps immutable/security contracts passed')
+          print('GitOps immutable/security/progressive-delivery contracts passed')
           PY

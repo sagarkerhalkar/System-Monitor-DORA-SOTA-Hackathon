@@ -158,8 +158,8 @@ spec:
       port: 8443
       targetPort: https
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: ai-ops
   namespace: system-monitor
@@ -167,12 +167,31 @@ metadata:
     app.kubernetes.io/name: ai-ops
     app.kubernetes.io/part-of: sagar-system-monitor
 spec:
-  replicas: 2
+  replicas: 20
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600
   selector:
     matchLabels:
       app.kubernetes.io/name: ai-ops
+  strategy:
+    canary:
+      maxSurge: 25%
+      maxUnavailable: 0
+      steps:
+        - setWeight: 10
+        - pause:
+            duration: 60s
+        - setWeight: 25
+        - pause:
+            duration: 60s
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - setWeight: 100
   template:
     metadata:
+      annotations:
+        hackathon.sagarkerhalkar.com/canary-revision: baseline
       labels:
         app.kubernetes.io/name: ai-ops
         app.kubernetes.io/part-of: sagar-system-monitor
