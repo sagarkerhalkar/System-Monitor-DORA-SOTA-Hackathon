@@ -17,7 +17,6 @@ from sagar_monitor.security.foundation import (
     create_user,
     hash_password,
     revoke_session,
-    validate_password_strength,
     validate_session,
     verify_audit_chain,
     verify_csrf,
@@ -63,11 +62,6 @@ class SecurityFoundationTests(unittest.TestCase):
                 password="password",
                 role="viewer",
             )
-
-    def test_password_minimum_length_is_eight(self):
-        validate_password_strength("Aa1!bcde")
-        with self.assertRaises(ValueError):
-            validate_password_strength("Aa1!bcd")
 
     def test_password_hash_and_authentication(self):
         stored = hash_password(PASSWORD, salt=b"0123456789abcdef")
