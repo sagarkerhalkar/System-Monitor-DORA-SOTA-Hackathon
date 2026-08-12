@@ -70,4 +70,4 @@ Every public engineering commit in this standalone hackathon repository uses the
 
 - **Hackathon 3.80** - Align secure Monitor bootstrap password policy; live Monitor recovered and Argo CD reached `Synced` + `Healthy`.
 - **Hackathon 3.81** - Add pinned, checksum-verified, idempotent Argo Rollouts v1.9.1 foundation with CI and permanent PASS/FAIL evidence policy.
-- **Hackathon 3.82** - Convert AI Ops to Argo Rollout with staged canary `10% -> 25% -> 50% -> 100%`; not started yet.
+- **Hackathon 3.82** - IN PROGRESS: convert only AI Ops to a 20-replica Argo Rollout, establish a healthy baseline, then trigger and prove staged canary `10% -> 25% -> 50% -> 100%` without weakening private-EKS or production security.
