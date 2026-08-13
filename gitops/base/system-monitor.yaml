@@ -180,18 +180,18 @@ spec:
       steps:
         - setWeight: 10
         - pause:
-            duration: 60s
+            duration: 5m
         - setWeight: 25
         - pause:
-            duration: 60s
+            duration: 5m
         - setWeight: 50
         - pause:
-            duration: 60s
+            duration: 5m
         - setWeight: 100
   template:
     metadata:
       annotations:
-        hackathon.sagarkerhalkar.com/canary-revision: baseline
+        hackathon.sagarkerhalkar.com/canary-revision: demo-1-20260813
       labels:
         app.kubernetes.io/name: ai-ops
         app.kubernetes.io/part-of: sagar-system-monitor
